@@ -1,0 +1,94 @@
+---
+
+version: "3.8"
+services:
+    fmr:
+        image: metadatatechnology/fmr-mysql:11.7.0      # Latest = latest stable release
+        container_name: fmr
+        environment:
+            - SERVER_URL=https://sdmx-test.nso.go.th
+        volumes:
+            - "./logs/supervisord/:/var/log/supervisor/"
+            - "./logs/tomcat/:/opt/tomcat/logs/"
+            - "mysql:/var/lib/mysql/"       # Required for custom sql configurations.
+            - "/etc/timezone:/etc/timezone:ro"
+            - "/etc/localtime:/etc/localtime:ro"
+        # ports:
+            # - "80:8080/tcp"       Direct communicate with the reverse proxy via container_name:8080. No need to bind 80 to host.
+            # - "3306:3306/tcp"     MySQL configured is in embedded mode. For ease of maintenance now using a dedicated Mariadb instance.
+        networks:
+            fmr:
+                ipv4_address: 172.28.0.3
+        restart: unless-stopped
+        depends_on:
+            - mariadb
+
+    httpd:
+        build: ./builds/httpd
+        image: httpd:2.4-alpine-custom
+        container_name: httpd
+        networks:
+            fmr:
+                ipv4_address: 172.28.0.4
+        ports:
+            - "80:80/tcp"
+            - "443:443/tcp"
+        volumes:
+            - "./logs/httpd:/var/logs/apache2"
+            - "/etc/timezone:/etc/timezone:ro"
+            - "/etc/localtime:/etc/localtime:ro"
+            - "goaccess:/usr/local/apache2/htdocs:ro"
+        depends_on:
+            - fmr
+
+    mariadb:
+        image: mariadb:10.11
+        container_name: mariadb
+        environment:
+            - MARIADB_ROOT_PASSWORD=
+        volumes:
+            - "./persistent-data/mariadb/:/var/lib/mysql/"
+            - "/etc/timezone:/etc/timezone:ro"
+            - "/etc/localtime:/etc/localtime:ro"
+        ports:
+            - "3306:3306/tcp"       # FMR connects via direct container's name, so 3306 still binded to host only for DBA tools. (possibly sql over ssh tunneling in the future).
+        networks:
+            fmr:
+                ipv4_address: 172.28.0.2
+        restart: unless-stopped
+
+    goaccess:
+        image: allinurl/goaccess:latest
+        container_name: goaccess
+        command:
+            - "--log-file=/access.log"
+            - "--log-format=COMBINED"
+            - "--output=/var/www/goaccess/index.html"
+            - "--real-time-html"
+            - "--ws-url=sdmx-test.nso.go.th/monitor/websocket"
+            - "--port=443"
+            - "--tz=Asia/Bangkok"
+            - "--persist"
+            - "--db-path=/tmp"
+        volumes:
+            - "./logs/httpd/sdmx-test.access.log:/access.log:ro"
+            - "goaccess:/var/www/goaccess"
+            - "./persistent-data/goaccess:/tmp"
+        networks:
+            fmr:
+                ipv4_address: 172.28.0.5
+        depends_on:
+            - httpd
+        profiles: ["monitor"]
+
+volumes:
+    mysql:
+    goaccess:
+
+networks:
+    fmr:
+        ipam:
+            config:
+                - subnet: 172.28.0.0/16
+        driver_opts:
+            com.docker.network.bridge.name: br-fmr

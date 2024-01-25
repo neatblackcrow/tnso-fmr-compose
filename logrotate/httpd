@@ -1,0 +1,14 @@
+/home/nso/fmr-mysql-compose/logs/httpd/*.log {
+    monthly
+    rotate 4
+    create 644 root root
+    compress
+    delaycompress
+    extension .log
+    dateext
+    dateformat %Y%m%d
+    postrotate
+        docker exec -d httpd apachectl -k graceful
+        docker container restart goaccess
+    endscript
+}

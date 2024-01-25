@@ -1,0 +1,12 @@
+[Unit]
+Description=Restore custom firewall configurations
+Before=network-pre.target
+Wants=network-pre.target ufw.service docker.service
+After=ufw.service docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /home/nso/fmr-mysql-compose/systemd/firewall.sh
+
+[Install]
+WantedBy=multi-user.target

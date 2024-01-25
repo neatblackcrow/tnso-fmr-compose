@@ -1,0 +1,10 @@
+/home/nso/fmr-mysql-compose/logs/tomcat/FusionRegistry.log /home/nso/fmr-mysql-compose/logs/tomcat/FusionRegistryWarnings.log {
+    weekly
+    rotate 16
+    copytruncate
+    compress
+    delaycompress
+    extension .log
+    dateext
+    dateformat %Y%m%d
+}

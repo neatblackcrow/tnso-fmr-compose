@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer triggers daily at midnight for %i service
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=%i.service
+
+[Install]
+WantedBy=timers.target

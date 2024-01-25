@@ -1,0 +1,6 @@
+[Unit]
+Description=Clear system cache
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -c 'echo 1 > /proc/sys/vm/drop_caches'
